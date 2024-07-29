@@ -1,31 +1,46 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const url = 'http://www.cleanup24.co.kr/sub/storelist/list.asp?s_cate=%EC%84%9C%EC%9A%B8';
 
-async function crawl() {
-    try {
-        // 웹 페이지에서 데이터를 가져옴
-        // const response = await axios.get('https://search.naver.com/search.naver?where=news&sm=tab_jum&query=%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90');
-        const response = await axios.get('https://laundry24.net/storestatus/');
+// 기본 URL 추출을 위한 모듈
+const { URL } = require('url');
 
-        // Cheerio를 사용하여 HTML을 파싱
-        const $ = cheerio.load(response.data);
-        // console.log("sdad",$)
+axios.get(url)
+    .then(response => {
+        // HTML 데이터 로드
+        const html = response.data;
+        const $ = cheerio.load(html);
 
-        // 원하는 데이터 추출
-        const newsTitles = $('h4').map((index, element) => $(element).text()).get();
-        const newsDescriptions = $('.news_dsc').map((index, element) => $(element).text()).get();
-        console.log(newsTitles)
+        // 기본 URL 객체 생성
+        const baseUrl = new URL(url);
 
-        // // 결과 출력
-        // for (let i = 0; i < newsTitles.length; i++) {
-        //     console.log(`제목: ${newsTitles[i]}`);
-        //     console.log(`설명: ${newsDescriptions[i]}`);
-        //     console.log('---');
-        // }
-    } catch (error) {
-        console.error(`Error: ${error.message}`);
-    }
-}
+        // schList 클래스 안의 img 태그의 src 속성 중 'upload'가 포함된 값 가져오기
+        const stores = [];
+        $('.schList').each((index, element) => {
+            const store = {};
 
-// 크롤링 함수 호출
-crawl();
+            // 가게명 (strong 태그, 예: '서울 성산점')
+            store.name = $(element).find('dt strong').text().trim();
+            console.log(store.name)
+
+            // img 태그의 src 속성 값 중 'upload'가 포함된 값
+            $(element).find('img').each((i, imgElement) => {
+                let src = $(imgElement).attr('src');
+                if (src && src.includes('upload')) {
+                    const imgUrl = new URL(src, baseUrl);
+                    store.imgUrl = imgUrl.href;
+                    // console.log(store.imgUrl)
+                }
+            });
+
+            // if (store.imgUrl) {
+            //     stores.push(store);
+            // }
+        });
+
+        // 결과 출력
+
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
